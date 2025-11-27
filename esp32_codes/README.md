@@ -89,52 +89,171 @@ GPIO -> Botão -> GND
 
 ---
 
-## 📝 Como Usar
+## 📝 Como Usar - Passo a Passo Completo
 
-### 1️⃣ **Instale o Arduino IDE**
-   - Download: https://www.arduino.cc/en/software
+### 🔧 **PARTE 1: Preparando o Arduino IDE**
 
-### 2️⃣ **Adicione suporte ESP32**
-   - Arquivo → Preferências
-   - URLs Adicionais: `https://dl.espressif.com/dl/package_esp32_index.json`
-   - Ferramentas → Placa → Gerenciador → Instale "ESP32"
+#### 1️⃣ **Instale o Arduino IDE**
+   - Baixe em: https://www.arduino.cc/en/software
+   - Execute o instalador (Next, Next, Install...)
+   - Abra o Arduino IDE
 
-### 3️⃣ **Instale bibliotecas necessárias**
+#### 2️⃣ **Adicione suporte para ESP32**
    
-   **Para códigos com RFID:**
-   - Sketch → Incluir Biblioteca → Gerenciar Bibliotecas
-   - Instale: `MFRC522` (por GithubCommunity)
+   **a)** Vá em: `Arquivo` → `Preferências`
    
-   **Para código HTTP:**
-   - Instale também: `ArduinoJson` (por Benoit Blanchon)
+   **b)** No campo **"URLs Adicionais para Gerenciadores de Placas"**, cole:
+   ```
+   https://espressif.github.io/arduino-esp32/package_esp32_index.json
+   ```
+   
+   **c)** Clique em `OK`
+   
+   **d)** Vá em: `Ferramentas` → `Placa` → `Gerenciador de Placas...`
+   
+   **e)** Procure por **"esp32"** e instale **"esp32 by Espressif Systems"**
+   
+   **f)** Aguarde o download terminar (pode demorar alguns minutos)
 
-### 4️⃣ **Configure o Python**
+#### 3️⃣ **Instale as bibliotecas necessárias**
    
-   No arquivo `config.py`:
+   **Para códigos com RFID** (`esp32_serial_rfid.ino` e `esp32_http_rfid.ino`):
    
-   **Para modo SERIAL:**
+   - `Sketch` → `Incluir Biblioteca` → `Gerenciar Bibliotecas...`
+   - Procure e instale:
+     - **MFRC522** (by GithubCommunity)
+     - **ArduinoJson** (by Benoit Blanchon) - apenas para HTTP
+   
+   **Para código simples** (`esp32_teste_simples.ino`):
+   - ✅ Não precisa instalar nada! Já funciona!
+
+---
+
+### 🎯 **PARTE 2: Gravando o código no ESP32**
+
+#### 4️⃣ **Abra o código .ino**
+   
+   - No Arduino IDE: `Arquivo` → `Abrir...`
+   - Navegue até a pasta `esp32_codes/`
+   - **Recomendado para começar:** `esp32_teste_simples.ino`
+
+#### 5️⃣ **Conecte o ESP32 ao computador**
+   
+   - Conecte o ESP32 via **cabo USB**
+   - O Windows deve instalar o driver automaticamente
+   
+   **⚠️ Se a porta COM não aparecer:**
+   - Seu ESP32 provavelmente usa chip CP210x ou CH340
+   - Baixe o driver apropriado:
+     - **CP210x**: https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers
+     - **CH340**: http://www.wch.cn/downloads/CH341SER_EXE.html
+
+#### 6️⃣ **Configure a placa e porta**
+   
+   **a)** `Ferramentas` → `Placa` → `ESP32 Arduino` → **"ESP32 Dev Module"**
+   
+   **b)** `Ferramentas` → `Porta` → Selecione a porta COM (ex: COM3, COM4, COM5...)
+   
+   **c)** Mantenha as outras configurações padrão
+
+#### 7️⃣ **Faça o Upload! 🚀**
+   
+   - Clique no botão **→** (Upload) no canto superior esquerdo
+   - Aguarde compilar (você verá: "Compilando...")
+   - Aguarde fazer upload (verá: "Uploading...")
+   - Se pedir, **segure o botão BOOT** no ESP32 durante o upload
+   - Quando terminar, verá: **"Hard resetting via RTS pin..."**
+   - ✅ **Pronto! Código gravado com sucesso!**
+
+#### 8️⃣ **Abra o Monitor Serial para testar**
+   
+   - `Ferramentas` → `Monitor Serial` (ou Ctrl+Shift+M)
+   - Configure para **115200 baud** (menu suspenso no canto inferior direito)
+   - Você deve ver mensagens do ESP32!
+
+---
+
+### 💻 **PARTE 3: Configure o Python**
+
+#### 9️⃣ **Configure o arquivo `config.py`**
+   
+   Volte para a pasta raiz do projeto e edite `config.py`:
+   
+   **Para modo SERIAL** (cabo USB):
    ```python
    MODO_ESP32 = "serial"
-   PORTA_SERIAL = "COM3"  # Windows
-   # PORTA_SERIAL = "/dev/ttyUSB0"  # Linux
+   PORTA_SERIAL = "COM3"  # Ajuste para sua porta (veja no Arduino IDE)
+   BAUDRATE = 115200
    ```
    
-   **Para modo HTTP:**
+   **Para modo HTTP** (Wi-Fi):
    ```python
    MODO_ESP32 = "http"
+   HTTP_HOST = "0.0.0.0"
    HTTP_PORT = 5000
    ```
+   
+   **⚠️ Lembre-se:** Se usar HTTP, configure Wi-Fi e IP no código `.ino` antes de fazer upload!
 
-### 5️⃣ **Faça upload do código**
-   - Conecte o ESP32 via USB
-   - Selecione a placa: "ESP32 Dev Module"
-   - Selecione a porta COM correta
-   - Clique em "Upload" (→)
-
-### 6️⃣ **Execute o sistema Python**
+#### 🔟 **Execute o sistema Python**
+   
+   Abra um terminal na pasta do projeto e execute:
    ```bash
    python main.py
    ```
+   
+   Você deve ver:
+   ```
+   ============================================
+     SISTEMA DE CONTROLE - RESTAURANTE UNIVERSITÁRIO
+   ============================================
+   
+   ✓ Gerenciador inicializado
+   📡 Aguardando comandos do ESP32...
+   ```
+
+---
+
+### 🎉 **PARTE 4: Testando o Sistema Completo**
+
+#### 1️⃣ **Com `esp32_teste_simples.ino`:**
+   - Pressione o **botão ENTRADA** (GPIO 15)
+   - Veja no Monitor Serial: `ENTRADA:RFID_A`
+   - Veja no Python: `✓ ENTRADA registrada: RFID_A | Pessoas dentro: 1`
+   - Pressione novamente: agora será `RFID_B`
+   - Pressione **botão SAÍDA** (GPIO 4) para registrar saída
+
+#### 2️⃣ **Com códigos RFID:**
+   - Aproxime um cartão RFID do leitor
+   - Segure o **botão ENTRADA** ou **SAÍDA**
+   - O sistema registra automaticamente!
+
+#### 3️⃣ **Consulte a API:**
+   
+   Abra o navegador em:
+   - **Status:** http://localhost:5000/status
+   - **Estatísticas:** http://localhost:5000/estatisticas
+   - **Histórico:** http://localhost:5000/historico
+
+---
+
+### 🔍 **Fluxo Completo Resumido:**
+
+```
+1. Instala Arduino IDE
+2. Adiciona suporte ESP32
+3. Instala bibliotecas (se necessário)
+4. Abre código .ino no Arduino IDE
+5. Conecta ESP32 via USB
+6. Seleciona placa "ESP32 Dev Module"
+7. Seleciona porta COM
+8. Clica em Upload (→)
+9. Abre Monitor Serial (115200 baud)
+10. Configura config.py no Python
+11. Executa python main.py
+12. Pressiona botões no ESP32
+13. Vê registros acontecendo em tempo real! 🎊
+```
 
 ---
 
@@ -155,13 +274,31 @@ GPIO -> Botão -> GND
 
 ---
 
-## 💡 Dicas
+## ⚠️ **Problemas Comuns e Soluções**
 
-- **Comece com `esp32_teste_simples.ino`** - não precisa de RFID!
-- **LED built-in pisca:** 1x = ENTRADA, 2x = SAÍDA
-- **Monitor Serial:** Configure para 115200 baud
-- **Problemas com RFID?** Confira as conexões SPI
-- **Wi-Fi não conecta?** Verifique SSID e senha
+| Problema | Solução |
+|----------|---------|
+| 🔴 Porta COM não aparece no Arduino IDE | Instale o driver: CP210x ou CH340 (links acima) |
+| 🔴 Erro "A fatal error occurred: Failed to connect" | Segure o botão **BOOT** no ESP32 durante upload |
+| 🔴 Monitor Serial mostra caracteres estranhos | Configure para **115200 baud** |
+| 🔴 "Connecting..." infinito | Aperte o botão **RST** no ESP32 |
+| 🔴 Python não detecta serial | Verifique a porta em `config.py` (mesma do Arduino IDE) |
+| 🔴 Wi-Fi não conecta (modo HTTP) | Verifique SSID e senha no código `.ino` |
+| 🔴 RFID não lê cartão | Confira conexões SPI (tabela acima) |
+| 🔴 Botão não funciona | Use resistor pull-up ou `INPUT_PULLUP` |
+
+---
+
+## 🎯 **Qual código usar?**
+
+| Situação | Código Recomendado |
+|----------|-------------------|
+| 🎓 **Apenas testando/aprendendo** | `esp32_teste_simples.ino` |
+| 🏃 **Não tem RFID ainda** | `esp32_teste_simples.ino` |
+| 💳 **Tem RFID + cabo USB** | `esp32_serial_rfid.ino` |
+| 📡 **Tem RFID + quer Wi-Fi** | `esp32_http_rfid.ino` |
+| ⚡ **Quer o mais rápido** | `esp32_serial_rfid.ino` (serial é mais rápido) |
+| 🌐 **Precisa de mobilidade** | `esp32_http_rfid.ino` (sem fio) |
 
 ---
 
