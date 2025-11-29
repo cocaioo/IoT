@@ -9,12 +9,18 @@ from typing import Dict, List, Optional
 from collections import defaultdict
 
 from models import Registro
+from webcam_captura import CapturaWebcam  # ← NOVO IMPORT
 
 
 class GerenciadorRestaurante:
     """Classe principal para gerenciar o restaurante"""
     
-    def __init__(self):
+    def __init__(self, habilitar_fotos: bool = True, camera_index: int = 0):
+        """
+        Args:
+            habilitar_fotos: Se True, captura foto da webcam a cada entrada/saída
+            camera_index: Índice da webcam (0 = padrão)
+        """
         self.pessoas_dentro: set = set()
         self.historico: List[Registro] = []
         self.estatisticas_diarias = defaultdict(lambda: {
@@ -29,6 +35,14 @@ class GerenciadorRestaurante:
         self.ultima_atualizacao_fila: Optional[datetime.datetime] = None
         
         self.lock = threading.Lock()
+        
+        # ← NOVO: Módulo de captura de fotos
+        self.habilitar_fotos = habilitar_fotos
+        if self.habilitar_fotos:
+            self.captura = CapturaWebcam(camera_index=camera_index)
+        else:
+            self.captura = None
+            print("⚠ Captura de fotos desabilitada")
     
     def registrar_entrada(self, rfid: str) -> Dict:
         """Registra entrada de uma pessoa"""
@@ -58,6 +72,10 @@ class GerenciadorRestaurante:
                 stats['horarios_pico'].append(timestamp.strftime('%H:%M:%S'))
             
             print(f"✓ ENTRADA registrada: {rfid} | Pessoas dentro: {pessoas_atual}")
+            
+            # ← NOVO: Captura foto da webcam
+            if self.captura:
+                self.captura.capturar_foto(rfid, "entrada")
             
             return {
                 'sucesso': True,
@@ -89,6 +107,10 @@ class GerenciadorRestaurante:
             
             pessoas_atual = len(self.pessoas_dentro)
             print(f"✓ SAÍDA registrada: {rfid} | Pessoas dentro: {pessoas_atual}")
+            
+            # ← NOVO: Captura foto da webcam
+            if self.captura:
+                self.captura.capturar_foto(rfid, "saida")
             
             return {
                 'sucesso': True,
@@ -141,7 +163,7 @@ class GerenciadorRestaurante:
             self.pessoas_na_fila = max(0, int(qtd))
             self.ultima_atualizacao_fila = datetime.datetime.now()
     
-    def exportar_dados(self, arquivo: str = 'dados_restaurante.json') -> str:
+    def exportar_dados(self, arquivo: str = 'dados_ru.json') -> str:
         """Exporta todos os dados para JSON"""
         with self.lock:
             dados = {
@@ -151,8 +173,8 @@ class GerenciadorRestaurante:
                 'pessoas_na_fila': self.pessoas_na_fila,
                 'exportado_em': datetime.datetime.now().isoformat()
             }
-        
-        with open(arquivo, 'w', encoding='utf-8') as f:
-            json.dump(dados, f, indent=2, ensure_ascii=False)
-        
-        return f"Dados exportados para {arquivo}"
+            
+            with open(arquivo, 'w', encoding='utf-8') as f:
+                json.dump(dados, f, indent=2, ensure_ascii=False)
+            
+            return f"Dados exportados para {arquivo}"
