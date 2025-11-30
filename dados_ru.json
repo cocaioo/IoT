@@ -1,0 +1,38 @@
+{
+  "pessoas_dentro": [],
+  "historico": [
+    {
+      "rfid": "RFID_2C0F8C47",
+      "timestamp": "2025-11-29T21:02:04.978219",
+      "tipo": "entrada"
+    },
+    {
+      "rfid": "RFID_2C0F8C47",
+      "timestamp": "2025-11-29T21:02:13.599724",
+      "tipo": "saida"
+    },
+    {
+      "rfid": "RFID_7766F7D8",
+      "timestamp": "2025-11-29T21:02:23.092136",
+      "tipo": "entrada"
+    },
+    {
+      "rfid": "RFID_7766F7D8",
+      "timestamp": "2025-11-29T21:02:30.201587",
+      "tipo": "saida"
+    }
+  ],
+  "estatisticas": {
+    "2025-11-29": {
+      "total_entradas": 2,
+      "total_saidas": 2,
+      "pico_pessoas": 1,
+      "horarios_pico": [
+        "21:02:04",
+        "21:02:23"
+      ]
+    }
+  },
+  "pessoas_na_fila": 0,
+  "exportado_em": "2025-11-29T21:02:49.926532"
+}

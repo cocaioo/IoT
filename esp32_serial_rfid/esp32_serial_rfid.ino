@@ -7,7 +7,7 @@
  * - Módulo RFID RC522
  * 
  * Conexões RFID RC522:
- * SDA  -> GPIO 5
+ * SDA  -> GPIO 21
  * SCK  -> GPIO 18
  * MOSI -> GPIO 23
  * MISO -> GPIO 19
@@ -68,15 +68,25 @@ void setup() {
 
 void loop() {
   // 1) Verifica se chegou algum comando do PC (Python/teclado)
-  if (Serial.available()) {
+  bool mudouModo = false;  // flag pra saber se mudou de E/S neste ciclo
+
+  while (Serial.available()) {
     char comando = Serial.read();
     if (comando == 'E') {
       modoAtual = "ENTRADA";
       Serial.println(">> Modo alterado para ENTRADA");
+      mudouModo = true;
     } else if (comando == 'S') {
       modoAtual = "SAIDA";
       Serial.println(">> Modo alterado para SAIDA");
+      mudouModo = true;
     }
+  }
+
+  // Se acabou de mudar de modo, NÃO processa cartão neste ciclo
+  if (mudouModo) {
+    delay(50);  // pequeno respiro
+    return;
   }
 
   // 2) Verifica se há um cartão presente
@@ -113,6 +123,8 @@ void loop() {
   
   delay(100);
 }
+
+// ===================== FUNÇÕES AUXILIARES =====================
 
 String obterRFID() {
   String conteudo = "";

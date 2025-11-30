@@ -20,7 +20,7 @@ class Config:
     HTTP_PORT = 5000
     
     # ==== CÂMERA - MONITORAMENTO DE FILA ====
-    HABILITAR_CAMERA = True  # True para ativar monitoramento de fila (contagem de pessoas)
+    HABILITAR_CAMERA = False  # True para ativar monitoramento de fila (contagem de pessoas)
     CAMERA_INDEX = 0    # 0 = webcam padrão
     INTERVALO_CAMERA_SEGUNDOS = 3  # Intervalo entre atualizações
     
