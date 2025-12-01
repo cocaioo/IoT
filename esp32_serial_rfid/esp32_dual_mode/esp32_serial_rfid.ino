@@ -1,6 +1,6 @@
 /*
  * ESP32 - Sistema de Controle de Restaurante
- * Modo: SERIAL (USB) CONTROLADO PELO TECLADO (E / S)
+ * Modo: DUAL (SERIAL + HTTP)
  * 
  * Hardware necessário:
  * - ESP32
@@ -15,18 +15,40 @@
  * GND  -> GND
  * 3.3V -> 3.3V
  * 
- * LÓGICA:
+ * LÓGICA MODO SERIAL:
  * - Python (PC) envia um caractere pela serial:
  *    'E' -> próxima leitura de cartão será ENTRADA
  *    'S' -> próxima leitura de cartão será SAIDA
  * - ESP32 aguarda um cartão RFID
  * - Quando um cartão é lido, o ESP32 envia:
  *    "ENTRADA:RFID_xxxxx"  ou  "SAIDA:RFID_xxxxx"
+ * 
+ * LÓGICA MODO HTTP:
+ * - Mesma lógica de E/S via serial
+ * - Envia evento via HTTP POST para o servidor Python
  */
 
 #include <SPI.h>
 #include <MFRC522.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 
+// ============================================================
+// CONFIGURAÇÃO: ESCOLHA O MODO AQUI
+// ============================================================
+#define MODO_HTTP false  // true = envia via HTTP | false = envia via Serial
+
+// ============================================================
+// CONFIGURAÇÕES Wi-Fi (somente para MODO_HTTP = true)
+// ============================================================
+const char* WIFI_SSID = "IoT";
+const char* WIFI_PASSWORD = "tudoehiot";
+const char* SERVER_URL = "http://10.191.217.193:5000/evento";
+
+// ============================================================
+// PINOS DO HARDWARE
+// ============================================================
 // Pinos do RFID
 #define SS_PIN 21
 #define RST_PIN 22
@@ -45,6 +67,7 @@ const unsigned long INTERVALO_LEITURA = 2000; // 2 segundos entre leituras do me
 
 void setup() {
   Serial.begin(115200);
+  delay(1000);
   
   // Inicializa SPI e RFID
   SPI.begin();
@@ -56,8 +79,16 @@ void setup() {
   
   Serial.println("===========================================");
   Serial.println("  ESP32 - Sistema de Controle de Restaurante");
-  Serial.println("  Modo: SERIAL CONTROLADO POR TECLADO (E/S)");
-  Serial.println("===========================================");
+  
+  if (MODO_HTTP) {
+    Serial.println("  Modo: HTTP (Wi-Fi)");
+    Serial.println("===========================================");
+    conectarWiFi();
+  } else {
+    Serial.println("  Modo: SERIAL (USB)");
+    Serial.println("===========================================");
+  }
+  
   Serial.println("Use:");
   Serial.println("  'E' para marcar próxima leitura como ENTRADA");
   Serial.println("  'S' para marcar próxima leitura como SAIDA");
@@ -67,6 +98,12 @@ void setup() {
 }
 
 void loop() {
+  // Verifica conexão Wi-Fi (se estiver em modo HTTP)
+  if (MODO_HTTP && WiFi.status() != WL_CONNECTED) {
+    Serial.println("⚠ Wi-Fi desconectado! Reconectando...");
+    conectarWiFi();
+  }
+  
   // 1) Verifica se chegou algum comando do PC (Python/teclado)
   bool mudouModo = false;  // flag pra saber se mudou de E/S neste ciclo
 
@@ -110,7 +147,7 @@ void loop() {
     ultimoRFID = rfidID;
     ultimaLeitura = agora;
     
-    // Envia evento conforme o modo atual
+    // Envia evento conforme o modo atual (SERIAL ou HTTP)
     enviarEvento(modoAtual, rfidID);
     piscarLED(modoAtual == "ENTRADA" ? 1 : 2);
     
@@ -126,6 +163,26 @@ void loop() {
 
 // ===================== FUNÇÕES AUXILIARES =====================
 
+void conectarWiFi() {
+  Serial.print("Conectando ao Wi-Fi");
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  
+  int tentativas = 0;
+  while (WiFi.status() != WL_CONNECTED && tentativas < 20) {
+    delay(500);
+    Serial.print(".");
+    tentativas++;
+  }
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n✓ Wi-Fi conectado!");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\n✗ Falha ao conectar Wi-Fi!");
+  }
+}
+
 String obterRFID() {
   String conteudo = "";
   for (byte i = 0; i < rfid.uid.size; i++) {
@@ -139,11 +196,46 @@ String obterRFID() {
 }
 
 void enviarEvento(String tipo, String rfid) {
-  // Formato esperado pelo Python: "TIPO:RFID"
-  Serial.println(tipo + ":" + rfid);
+  if (MODO_HTTP) {
+    // Modo HTTP: envia via POST
+    enviarEventoHTTP(tipo, rfid);
+  } else {
+    // Modo Serial: envia no formato "TIPO:RFID"
+    Serial.println(tipo + ":" + rfid);
+    delay(50);
+  }
+}
 
-  // Pequeno delay pra dar tempo do PC ler
-  delay(50);
+void enviarEventoHTTP(String tipo, String rfid) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("✗ Wi-Fi desconectado! Não foi possível enviar.");
+    return;
+  }
+  
+  HTTPClient http;
+  http.begin(SERVER_URL);
+  http.addHeader("Content-Type", "application/json");
+  
+  // Monta JSON
+  StaticJsonDocument<200> doc;
+  doc["tipo"] = tipo;
+  doc["rfid"] = rfid;
+  
+  String jsonString;
+  serializeJson(doc, jsonString);
+  
+  Serial.println("📤 Enviando: " + jsonString);
+  
+  int httpCode = http.POST(jsonString);
+  
+  if (httpCode > 0) {
+    String resposta = http.getString();
+    Serial.println("✓ Resposta: " + resposta);
+  } else {
+    Serial.println("✗ Erro HTTP: " + String(httpCode));
+  }
+  
+  http.end();
 }
 
 void piscarLED(int vezes) {

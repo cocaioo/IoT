@@ -8,11 +8,10 @@ class Config:
     
     # ==== INTEGRAÇÃO COM ESP32 ====
     # Opções: "serial", "http" ou "nenhum"
-    MODO_ESP32 = "serial"
+    MODO_ESP32 = "http"
     
     # Configurações para modo SERIAL
-    # PORTA_SERIAL = "/dev/ttyUSB0"  # Linux/Mac
-    PORTA_SERIAL = "COM7"    # Windows (ajuste para sua porta)
+    PORTA_SERIAL = "COM7"
     BAUDRATE = 115200
     
     # Configurações para modo HTTP
