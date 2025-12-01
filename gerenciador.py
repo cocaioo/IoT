@@ -34,6 +34,10 @@ class GerenciadorRestaurante:
         self.pessoas_na_fila: int = 0
         self.ultima_atualizacao_fila: Optional[datetime.datetime] = None
         
+        # ← NOVO: Controle de tempo de permanência
+        self.horarios_entrada: Dict[str, datetime.datetime] = {}  # rfid -> timestamp entrada
+        self.tempos_permanencia: List[Dict] = []  # histórico de tempos
+        
         self.lock = threading.Lock()
         
         # ← NOVO: Módulo de captura de fotos
@@ -59,6 +63,9 @@ class GerenciadorRestaurante:
             self.pessoas_dentro.add(rfid)
             registro = Registro(rfid, timestamp, 'entrada')
             self.historico.append(registro)
+            
+            # ← NOVO: Registra horário de entrada
+            self.horarios_entrada[rfid] = timestamp
             
             data_hoje = timestamp.date().isoformat()
             stats = self.estatisticas_diarias[data_hoje]
@@ -101,6 +108,23 @@ class GerenciadorRestaurante:
             registro = Registro(rfid, timestamp, 'saida')
             self.historico.append(registro)
             
+            # ← NOVO: Calcula tempo de permanência
+            tempo_permanencia = None
+            if rfid in self.horarios_entrada:
+                entrada = self.horarios_entrada[rfid]
+                duracao = timestamp - entrada
+                tempo_permanencia = {
+                    'rfid': rfid,
+                    'entrada': entrada.isoformat(),
+                    'saida': timestamp.isoformat(),
+                    'duracao_segundos': int(duracao.total_seconds()),
+                    'duracao_formatada': self._formatar_duracao(duracao)
+                }
+                self.tempos_permanencia.append(tempo_permanencia)
+                del self.horarios_entrada[rfid]
+                
+                print(f"⏱️  Tempo de permanência: {tempo_permanencia['duracao_formatada']}")
+            
             data_hoje = timestamp.date().isoformat()
             stats = self.estatisticas_diarias[data_hoje]
             stats['total_saidas'] += 1
@@ -117,7 +141,8 @@ class GerenciadorRestaurante:
                 'mensagem': 'Saída registrada com sucesso',
                 'rfid': rfid,
                 'timestamp': timestamp.isoformat(),
-                'pessoas_dentro': pessoas_atual
+                'pessoas_dentro': pessoas_atual,
+                'tempo_permanencia': tempo_permanencia
             }
     
     def obter_status_atual(self) -> Dict:
@@ -163,6 +188,57 @@ class GerenciadorRestaurante:
             self.pessoas_na_fila = max(0, int(qtd))
             self.ultima_atualizacao_fila = datetime.datetime.now()
     
+    def _formatar_duracao(self, duracao: datetime.timedelta) -> str:
+        """Formata timedelta em string legível"""
+        segundos_totais = int(duracao.total_seconds())
+        horas = segundos_totais // 3600
+        minutos = (segundos_totais % 3600) // 60
+        segundos = segundos_totais % 60
+        
+        if horas > 0:
+            return f"{horas}h {minutos}min {segundos}s"
+        elif minutos > 0:
+            return f"{minutos}min {segundos}s"
+        else:
+            return f"{segundos}s"
+    
+    def obter_tempos_permanencia(self, rfid: Optional[str] = None) -> List[Dict]:
+        """
+        Retorna histórico de tempos de permanência
+        
+        Args:
+            rfid: Se especificado, retorna apenas os tempos desse RFID
+        """
+        with self.lock:
+            if rfid:
+                return [t for t in self.tempos_permanencia if t['rfid'] == rfid]
+            return self.tempos_permanencia.copy()
+    
+    def obter_estatisticas_tempo(self) -> Dict:
+        """Retorna estatísticas sobre tempos de permanência"""
+        with self.lock:
+            if not self.tempos_permanencia:
+                return {
+                    'total_visitas': 0,
+                    'tempo_medio_segundos': 0,
+                    'tempo_medio_formatado': '0s',
+                    'tempo_minimo': None,
+                    'tempo_maximo': None
+                }
+            
+            duracoes = [t['duracao_segundos'] for t in self.tempos_permanencia]
+            tempo_medio = sum(duracoes) / len(duracoes)
+            
+            return {
+                'total_visitas': len(self.tempos_permanencia),
+                'tempo_medio_segundos': int(tempo_medio),
+                'tempo_medio_formatado': self._formatar_duracao(datetime.timedelta(seconds=tempo_medio)),
+                'tempo_minimo_segundos': min(duracoes),
+                'tempo_minimo_formatado': self._formatar_duracao(datetime.timedelta(seconds=min(duracoes))),
+                'tempo_maximo_segundos': max(duracoes),
+                'tempo_maximo_formatado': self._formatar_duracao(datetime.timedelta(seconds=max(duracoes)))
+            }
+    
     def exportar_dados(self, arquivo: str = 'dados_ru.json') -> str:
         """Exporta todos os dados para JSON"""
         with self.lock:
@@ -171,6 +247,8 @@ class GerenciadorRestaurante:
                 'historico': [reg.to_dict() for reg in self.historico],
                 'estatisticas': dict(self.estatisticas_diarias),
                 'pessoas_na_fila': self.pessoas_na_fila,
+                'tempos_permanencia': self.tempos_permanencia,  # ← NOVO
+                'estatisticas_tempo': self.obter_estatisticas_tempo(),  # ← NOVO
                 'exportado_em': datetime.datetime.now().isoformat()
             }
             

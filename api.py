@@ -61,4 +61,15 @@ def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
             limite = 100
         return jsonify(gerenciador.obter_historico(limite))
     
+    @app.route("/tempos", methods=["GET"])
+    def tempos_permanencia():
+        """Retorna tempos de permanência (opcional: ?rfid=RFID_123)"""
+        rfid = request.args.get("rfid")
+        return jsonify(gerenciador.obter_tempos_permanencia(rfid))
+    
+    @app.route("/estatisticas-tempo", methods=["GET"])
+    def estatisticas_tempo():
+        """Retorna estatísticas de tempo de permanência"""
+        return jsonify(gerenciador.obter_estatisticas_tempo())
+    
     return app
