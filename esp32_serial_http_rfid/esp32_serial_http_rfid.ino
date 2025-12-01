@@ -37,7 +37,7 @@
 // ============================================================
 // CONFIGURAÇÃO: ESCOLHA O MODO AQUI
 // ============================================================
-#define MODO_HTTP false  // true = envia via HTTP | false = envia via Serial
+#define MODO_HTTP true  // true = envia via HTTP | false = envia via Serial
 
 // ============================================================
 // CONFIGURAÇÕES Wi-Fi (somente para MODO_HTTP = true)

@@ -24,14 +24,24 @@ def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
         Endpoint para ESP32 enviar eventos via HTTP
         Body JSON: {"tipo": "ENTRADA" ou "SAIDA", "rfid": "RFID_123"}
         """
+        print("\n🔔 Requisição recebida em /evento")
+        print(f"   Headers: {dict(request.headers)}")
+        print(f"   Body raw: {request.get_data()}")
+        
         dados = request.get_json(silent=True)
+        print(f"   JSON parsed: {dados}")
+        
         if not dados:
+            print("   ❌ JSON inválido!")
             return jsonify({"erro": "JSON inválido"}), 400
         
         tipo = dados.get("tipo", "").upper()
         rfid = dados.get("rfid")
         
+        print(f"   Tipo: {tipo}, RFID: {rfid}")
+        
         if not rfid or tipo not in ("ENTRADA", "SAIDA"):
+            print("   ❌ Campos inválidos!")
             return jsonify({"erro": "Campos 'tipo' ou 'rfid' inválidos"}), 400
         
         if tipo == "ENTRADA":
@@ -39,6 +49,7 @@ def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
         else:
             resp = gerenciador.registrar_saida(rfid)
         
+        print(f"   ✓ Resposta: {resp}\n")
         return jsonify(resp)
     
     @app.route("/status", methods=["GET"])

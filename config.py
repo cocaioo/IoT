@@ -27,7 +27,7 @@ class Config:
     AREA_MINIMA_PESSOA = 1500  # Área mínima para considerar como pessoa
     
     # ==== CAPTURA DE FOTOS (WEBCAM) ====  ← NOVO
-    HABILITAR_FOTOS = True  # True para capturar foto da webcam a cada entrada/saída
+    HABILITAR_FOTOS = False  # True para capturar foto da webcam a cada entrada/saída
     CAMERA_FOTOS_INDEX = 0  # 0 = webcam padrão (pode ser diferente da câmera de fila)
     
     # ==== EXPORTAÇÃO DE DADOS ====
