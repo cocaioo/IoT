@@ -1,7 +1,3 @@
-"""
-Monitor de fila usando visão computacional com câmera e Stream MJPEG
-"""
-
 import threading
 import time
 import cv2
@@ -47,22 +43,20 @@ class MonitorFilaCamera:
         cap = cv2.VideoCapture(self.camera_index)
 
         if not cap.isOpened():
-            print(f"❌ Não foi possível abrir a câmera {self.camera_index}")
+            print(f"Não foi possível abrir a câmera {self.camera_index}")
             return
 
-        print(f"📷 Câmera iniciada (Index: {self.camera_index})")
+        print(f"Câmera iniciada (Index: {self.camera_index})")
 
         ultimo_tempo_atualizacao = 0
 
         while self.rodando:
             ret, frame = cap.read()
             if not ret:
-                print("❌ Falha ao capturar frame")
+                print("Falha ao capturar frame")
                 time.sleep(1)
                 continue
 
-            # Redimensionar para melhorar performance do HOG (importante no Raspberry)
-            # Uma largura de 400 a 500px é um bom balanço entre velocidade e precisão
             largura_alvo = 500
             proporcao = largura_alvo / frame.shape[1]
             altura_alvo = int(frame.shape[0] * proporcao)
@@ -75,8 +69,8 @@ class MonitorFilaCamera:
             # scale: fator de escala (1.05 é padrão, aumentar deixa mais rápido mas perde detalhes)
             boxes, weights = self.hog.detectMultiScale(
                 frame,
-                winStride=(8, 8),
-                padding=(8, 8),
+                winStride=(4, 4),
+                padding=(4, 4),
                 scale=1.05
             )
 
@@ -105,7 +99,6 @@ class MonitorFilaCamera:
                 with self.lock_frame:
                     self.ultimo_frame_jpeg = buffer.tobytes()
 
-            # Pequeno delay para não fritar a CPU se o FPS for muito alto
             time.sleep(0.05)
 
         cap.release()

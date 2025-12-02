@@ -6,7 +6,6 @@ Configurações do sistema de controle do restaurante
 class Config:
     """Configurações centralizadas do sistema"""
     
-    # ==== INTEGRAÇÃO COM ESP32 ====
     # Opções: "serial", "http" ou "nenhum"
     MODO_ESP32 = "http"
     
@@ -23,8 +22,6 @@ class Config:
     CAMERA_INDEX = 0    # 0 = webcam padrão
     INTERVALO_CAMERA_SEGUNDOS = 3  # Intervalo entre atualizações
     
-    # Parâmetros de detecção
     AREA_MINIMA_PESSOA = 1500  # Área mínima para considerar como pessoa
     
-    # ==== EXPORTAÇÃO DE DADOS ====
     ARQUIVO_EXPORTACAO = "dados_ru.json"
