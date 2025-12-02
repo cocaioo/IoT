@@ -1,216 +1,138 @@
-# Sistema de Controle de Restaurante Universitário
+# Sistema de Controle - Restaurante Universitário
 
-Sistema modularizado para controle de entrada/saída de pessoas usando RFID (ESP32) e monitoramento de fila com câmera.
+Sistema para controle de entrada/saída usando RFID (ESP32) com monitoramento de fila por câmera.
 
-## Estrutura do Projeto
+## Arquivos
 
 ```
-trabalho_TÓPICOSEMREDE/
-├── main.py              # Ponto de entrada - orquestra todos os módulos
-├── config.py            # Configurações centralizadas do sistema
-├── models.py            # Modelos de dados (Registro)
-├── gerenciador.py       # Lógica de gerenciamento do restaurante
-├── esp32_serial.py      # Integração com ESP32 via serial
-├── camera_monitor.py    # Monitoramento de fila com câmera
-├── api.py               # API HTTP REST (Flask)
-└── requirements.txt     # Dependências do projeto
+├── main.py              # Inicia o sistema
+├── config.py            # Configurações
+├── models.py            # Estruturas de dados
+├── gerenciador.py       # Controle de entradas/saídas
+├── esp32_serial.py      # Comunicação serial com ESP32
+├── api.py               # API REST (Flask)
+├── camera_monitor.py    # Detecção de pessoas na fila
+└── webcam_captura.py    # Captura de fotos/vídeos
 ```
 
-## Módulos
+## Funcionalidades
 
-### `models.py`
-Contém as estruturas de dados:
-- `Registro`: Representa uma entrada/saída com RFID, timestamp e tipo
+- Registro de entradas/saídas via RFID
+- Cálculo automático de tempo de permanência
+- Dashboard web em tempo real
+- Detecção de fila por câmera (HOG+SVM)
+- Exportação de dados em JSON
+- Simulador para testes
 
-### `gerenciador.py`
-Classe `GerenciadorRestaurante` - núcleo do sistema:
-- Registra entradas e saídas
-- Controla pessoas dentro do restaurante
-- **⏱️ Calcula tempo de permanência de cada pessoa**
-- Mantém histórico e estatísticas
-- Gerencia contagem da fila
-- Exporta dados para JSON
+## Instalação
 
-### `esp32_serial.py`
-Classe `IntegradorESP32Serial`:
-- Comunicação serial (USB) com ESP32
-- Processa comandos ENTRADA/SAIDA/STATUS
-- Envia respostas JSON para o ESP32
+```bash
+pip install -r requirements.txt
+```
 
-### `camera_monitor.py`
-Classe `MonitorFilaCamera`:
-- Usa OpenCV para detectar pessoas na fila
-- Background subtraction para contagem
-- Atualiza o gerenciador periodicamente
+## Uso
 
-### `api.py`
-API REST usando Flask:
-- `POST /evento` - Registrar entrada/saída (para ESP32 via Wi-Fi)
-- `GET /status` - Status atual do restaurante
-- `GET /estatisticas` - Estatísticas do dia
-- `GET /historico` - Histórico de registros
-- **⏱️ `GET /tempos` - Tempos de permanência (todos ou por RFID)**
-- **⏱️ `GET /estatisticas-tempo` - Estatísticas de tempo (média, mín, máx)**
+Configure em `config.py`:
+- Modo ESP32 (serial/http)
+- Porta serial ou IP do servidor
+- Habilitar/desabilitar câmera
 
-### `config.py`
-Configurações centralizadas:
-- Modo de integração ESP32 (serial/http/nenhum)
-- Portas serial e HTTP
-- Parâmetros da câmera
-- Arquivo de exportação
+Execute:
+```bash
+python main.py
+```
 
-### `main.py`
-Orquestra todos os módulos:
-- Inicializa o gerenciador
-- Configura ESP32 (serial ou HTTP)
-- Inicia monitor de câmera
-- Sobe a API HTTP
-- Exporta dados ao encerrar
+## Dashboard
 
-## Como Usar
+Acesse `http://localhost:5000` para visualizar:
+- Pessoas dentro do restaurante
+- Fila detectada pela câmera
+- Histórico de entradas/saídas
+- Tempos de permanência
 
-1. Ajuste as configurações em `config.py`
-2. Execute: `python main.py`
-3. O sistema iniciará conforme configurado
+## API REST
 
-## Endpoints da API
+### Status
+```
+GET /status
+```
+Retorna pessoas dentro, fila e RFIDs ativos.
 
-### 📊 **Controle e Status**
-- **Status atual**: `http://localhost:5000/status`
-  - Retorna pessoas dentro, fila, RFIDs ativos
+### Registro de evento
+```
+POST /evento
+Content-Type: application/json
 
-- **Estatísticas diárias**: `http://localhost:5000/estatisticas?data=2025-11-30`
-  - Total de entradas/saídas, pico de pessoas, horários de pico
+{
+  "tipo": "ENTRADA",
+  "rfid": "RFID_123"
+}
+```
 
-- **Histórico**: `http://localhost:5000/historico?limite=50`
-  - Últimos N registros de entrada/saída
+### Histórico
+```
+GET /historico?limite=50
+```
 
-### ⏱️ **Tempo de Permanência** (NOVO!)
+### Tempos de permanência
+```
+GET /tempos
+GET /tempos?rfid=RFID_123
+GET /estatisticas-tempo
+```
 
-- **Tempos de permanência**: `http://localhost:5000/tempos`
-  - Lista todos os tempos de permanência registrados
-  - **Filtrar por pessoa**: `http://localhost:5000/tempos?rfid=RFID_001`
-  
-  **Exemplo de resposta:**
-  ```json
-  [
-    {
-      "rfid": "RFID_001",
-      "entrada": "2025-11-30T14:30:15.123456",
-      "saida": "2025-11-30T15:15:45.789012",
-      "duracao_segundos": 2730,
-      "duracao_formatada": "45min 30s"
-    }
-  ]
-  ```
+## ESP32 - Modo HTTP
 
-- **Estatísticas de tempo**: `http://localhost:5000/estatisticas-tempo`
-  - Tempo médio, mínimo e máximo de permanência
-  
-  **Exemplo de resposta:**
-  ```json
-  {
-    "total_visitas": 10,
-    "tempo_medio_segundos": 1800,
-    "tempo_medio_formatado": "30min 0s",
-    "tempo_minimo_segundos": 600,
-    "tempo_minimo_formatado": "10min 0s",
-    "tempo_maximo_segundos": 3600,
-    "tempo_maximo_formatado": "1h 0min 0s"
-  }
-  ```
+Configure no arquivo `.ino`:
+```cpp
+#define MODO_HTTP true
+const char* ssid = "IoT";
+const char* password = "tudoehiot";
+const char* SERVER_URL = "http://10.191.217.193:5000/evento";
+```
 
-### 📝 **Registro de Eventos**
-- **Evento**: `POST http://localhost:5000/evento`
-  ```json
-  {
-    "tipo": "ENTRADA",
-    "rfid": "RFID_123"
-  }
-  ```
-  
-  **Resposta de SAÍDA (inclui tempo):**
-  ```json
-  {
-    "sucesso": true,
-    "mensagem": "Saída registrada com sucesso",
-    "rfid": "RFID_001",
-    "timestamp": "2025-11-30T15:15:45.789012",
-    "pessoas_dentro": 0,
-    "tempo_permanencia": {
-      "rfid": "RFID_001",
-      "entrada": "2025-11-30T14:30:15.123456",
-      "saida": "2025-11-30T15:15:45.789012",
-      "duracao_segundos": 2730,
-      "duracao_formatada": "45min 30s"
-    }
-  }
-  ```
+Ao aproximar cartão RFID, o ESP32 envia POST com JSON.
 
-## Benefícios da Modularização
+## ESP32 - Modo Serial
 
-✅ **Legibilidade**: Cada módulo tem uma responsabilidade clara  
-✅ **Manutenção**: Fácil localizar e modificar funcionalidades  
-✅ **Testabilidade**: Módulos podem ser testados independentemente  
-✅ **Reutilização**: Classes podem ser usadas em outros projetos  
-✅ **Escalabilidade**: Novos módulos podem ser adicionados facilmente  
+Configure `MODO_HTTP = false` no ESP32 e `MODO_ESP32 = "serial"` em `config.py`.
 
-## 📦 Dados Exportados (`dados_ru.json`)
+Comandos via Serial Monitor:
+- `E` - Simula entrada
+- `S` - Simula saída
 
-Ao encerrar o sistema (Ctrl+C), é gerado automaticamente um arquivo JSON com:
+## Exportação de Dados
+
+Ao encerrar (Ctrl+C), é gerado `dados_ru.json`:
 
 ```json
 {
   "pessoas_dentro": ["RFID_002"],
-  "historico": [
-    {
-      "rfid": "RFID_001",
-      "timestamp": "2025-11-30T14:30:15.123456",
-      "tipo": "entrada"
-    },
-    {
-      "rfid": "RFID_001",
-      "timestamp": "2025-11-30T15:15:45.789012",
-      "tipo": "saida"
-    }
-  ],
-  "estatisticas": {
-    "2025-11-30": {
-      "total_entradas": 5,
-      "total_saidas": 4,
-      "pico_pessoas": 3,
-      "horarios_pico": ["14:45:30"]
-    }
-  },
-  "pessoas_na_fila": 2,
-  "tempos_permanencia": [
-    {
-      "rfid": "RFID_001",
-      "entrada": "2025-11-30T14:30:15.123456",
-      "saida": "2025-11-30T15:15:45.789012",
-      "duracao_segundos": 2730,
-      "duracao_formatada": "45min 30s"
-    }
-  ],
-  "estatisticas_tempo": {
-    "total_visitas": 4,
-    "tempo_medio_segundos": 1800,
-    "tempo_medio_formatado": "30min 0s",
-    "tempo_minimo_segundos": 600,
-    "tempo_minimo_formatado": "10min 0s",
-    "tempo_maximo_segundos": 2730,
-    "tempo_maximo_formatado": "45min 30s"
-  },
-  "exportado_em": "2025-11-30T16:00:00.000000"
+  "historico": [...],
+  "estatisticas": {...},
+  "tempos_permanencia": [...],
+  "exportado_em": "2025-11-30T16:00:00"
 }
 ```
 
-### 🔍 Estrutura dos dados:
+## Hardware
 
-- **`pessoas_dentro`**: RFIDs atualmente no RU
-- **`historico`**: Todos os registros de entrada/saída
-- **`estatisticas`**: Dados diários (entradas, saídas, pico)
-- **`pessoas_na_fila`**: Último valor da câmera
-- **⏱️ `tempos_permanencia`**: Todos os tempos calculados
-- **⏱️ `estatisticas_tempo`**: Médias e análises de tempo
-- **`exportado_em`**: Timestamp da exportação  
+- ESP32 DevKit
+- MFRC522 (RFID)
+- Webcam (qualquer)
+
+Pinagem MFRC522:
+```
+SDA  -> GPIO 21
+SCK  -> GPIO 18
+MOSI -> GPIO 23
+MISO -> GPIO 19
+RST  -> GPIO 22
+```
+
+## Observações
+
+- Dashboard atualiza a cada 3 segundos
+- Câmera usa detector HOG+SVM (melhor performance)
+- Suporta múltiplos cartões simultâneos
+- Thread-safe para operações concorrentes  
