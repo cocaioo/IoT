@@ -120,10 +120,20 @@ class GerenciadorRestaurante:
     
     def obter_status_atual(self) -> Dict:
         with self.lock:
+            data_hoje = datetime.date.today().isoformat()
+            stats = self.estatisticas_diarias.get(data_hoje, {
+                'total_entradas': 0,
+                'total_saidas': 0,
+                'pico_pessoas': 0,
+                'horarios_pico': []
+            })
+            
             return {
                 'pessoas_dentro': len(self.pessoas_dentro),
                 'rfids_dentro': list(self.pessoas_dentro),
                 'pessoas_na_fila': self.pessoas_na_fila,
+                'entradas_hoje': stats['total_entradas'],
+                'saidas_hoje': stats['total_saidas'],
                 'ultima_atualizacao_fila': self.ultima_atualizacao_fila.isoformat()
                 if self.ultima_atualizacao_fila else None,
                 'timestamp': datetime.datetime.now().isoformat()

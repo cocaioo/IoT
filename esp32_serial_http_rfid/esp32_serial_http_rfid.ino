@@ -46,10 +46,6 @@ const char* WIFI_SSID = "IoT";
 const char* WIFI_PASSWORD = "tudoehiot";
 const char* SERVER_URL = "http://10.191.217.193:5000/evento";
 
-// ============================================================
-// PINOS DO HARDWARE
-// ============================================================
-// Pinos do RFID
 #define SS_PIN 21
 #define RST_PIN 22
 
@@ -138,11 +134,9 @@ void loop() {
     return;
   }
   
-  // 4) Obtém o ID do cartão
   String rfidID = obterRFID();
   unsigned long agora = millis();
   
-  // Evita leituras duplicadas muito próximas do mesmo cartão
   if (rfidID != ultimoRFID || (agora - ultimaLeitura) > INTERVALO_LEITURA) {
     ultimoRFID = rfidID;
     ultimaLeitura = agora;
@@ -154,14 +148,12 @@ void loop() {
     Serial.println("✓ Cartão processado como " + modoAtual + "\n");
   }
   
-  // 5) Finaliza comunicação com o cartão
   rfid.PICC_HaltA();
   rfid.PCD_StopCrypto1();
   
   delay(100);
 }
 
-// ===================== FUNÇÕES AUXILIARES =====================
 
 void conectarWiFi() {
   Serial.print("Conectando ao Wi-Fi");
