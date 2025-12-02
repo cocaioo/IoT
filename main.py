@@ -55,8 +55,8 @@ def main():
     monitor.iniciar()
     
     # ==== API HTTP ====
-    
-    app = criar_app(gerenciador)
+
+    app = criar_app(gerenciador, monitor)
     
     print(f"Iniciando API HTTP em http://{Config.HTTP_HOST}:{Config.HTTP_PORT}")
     print(f"   Acesse http://localhost:{Config.HTTP_PORT}/status para ver o status\n")
@@ -69,7 +69,8 @@ def main():
             host=Config.HTTP_HOST, 
             port=Config.HTTP_PORT, 
             debug=False, 
-            use_reloader=False
+            use_reloader=False,
+            threaded=True
         )
     except KeyboardInterrupt:
         print("\n\nEncerrando sistema...")

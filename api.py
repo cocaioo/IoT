@@ -2,23 +2,47 @@
 API HTTP usando Flask para comunicação com ESP32 e consultas
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 
 from gerenciador import GerenciadorRestaurante
 from simulador import SimuladorRestaurante
+import time
 
 
 # Instância do gerenciador (será injetada pelo main)
 gerenciador: GerenciadorRestaurante = None
 simulador: SimuladorRestaurante = None
+monitor_camera = None
 
 
-def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
+def criar_app(gerenciador_instancia: GerenciadorRestaurante, monitor_instancia=None) -> Flask:
     global gerenciador
     gerenciador = gerenciador_instancia
     simulador = SimuladorRestaurante(gerenciador)
+    monitor_camera = monitor_instancia
     
     app = Flask(__name__)
+
+    def gerar_frames():
+        while True:
+            if monitor_camera:
+                frame = monitor_camera.obter_frame()
+                if frame:
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                else:
+                    # Se não tiver frame ainda, espera um pouco para não travar a CPU
+                    time.sleep(0.1)
+            else:
+                break
+    
+            # Pequena pausa para liberar recursos do servidor para outras rotas
+            time.sleep(0.01)
+
+    @app.route('/video_feed')
+    def video_feed():
+        """Rota que transmite o vídeo"""
+        return Response(gerar_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
     @app.route("/simular/entrada", methods=["POST"])
     def simular_entrada():
@@ -88,6 +112,16 @@ def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Controle - Restaurante Universitário</title>
     <style>
+    
+        /* Camera Container */
+        .camera-container { text-align: center; }
+        .camera-feed { 
+            width: 100%; 
+            max-width: 500px; 
+            border-radius: 8px; 
+            border: 3px solid #333;
+            background: #000;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -300,6 +334,16 @@ def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
                     <!-- Carregado via JavaScript -->
                 </tbody>
             </table>
+        </div>
+        
+        <div class="card camera-container">
+            <h2>🎥 Câmera da Fila</h2>
+            <p>Detecção em tempo real</p>
+            <img src="/video_feed" class="camera-feed" alt="Carregando câmera...">
+            
+            <div style="margin-top: 15px; font-size: 1.2em;">
+                Pessoas na Fila (Detecção): <strong id="num-fila">0</strong>
+            </div>
         </div>
         
         <p class="refresh-info">⟳ Atualização automática a cada 3 segundos</p>
