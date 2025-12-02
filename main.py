@@ -23,26 +23,26 @@ def main():
     
     # Inicializa gerenciador
     gerenciador = GerenciadorRestaurante()
-    print("✓ Gerenciador inicializado\n")
+    print("Gerenciador inicializado\n")
     
     # ==== INTEGRAÇÃO COM ESP32 ====
     
     if Config.MODO_ESP32 == "serial":
-        print("📡 Modo: SERIAL (USB)")
+        print("Modo: SERIAL (USB)")
         integrador = IntegradorESP32Serial(
             gerenciador, 
             Config.PORTA_SERIAL, 
             Config.BAUDRATE
         )
         if not integrador.iniciar():
-            print("\n⚠ Continuando sem ESP32...\n")
+            print("\nContinuando sem ESP32...\n")
     
     elif Config.MODO_ESP32 == "http":
-        print("📡 Modo: HTTP (Wi-Fi)")
+        print("Modo: HTTP (Wi-Fi)")
         print(f"   O ESP32 deve enviar requisições para: http://SEU_IP:{Config.HTTP_PORT}/evento\n")
     
     else:
-        print("📡 Modo: Nenhum (ESP32 desabilitado)\n")
+        print("Modo: ESP32 desabilitado\n")
     
     # ==== MONITOR DE CÂMERA (FILA) ====
     
@@ -58,7 +58,7 @@ def main():
     
     app = criar_app(gerenciador)
     
-    print(f"🌐 Iniciando API HTTP em http://{Config.HTTP_HOST}:{Config.HTTP_PORT}")
+    print(f"Iniciando API HTTP em http://{Config.HTTP_HOST}:{Config.HTTP_PORT}")
     print(f"   Acesse http://localhost:{Config.HTTP_PORT}/status para ver o status\n")
     print("="*60)
     print("Sistema rodando! Pressione Ctrl+C para encerrar.")
@@ -72,13 +72,13 @@ def main():
             use_reloader=False
         )
     except KeyboardInterrupt:
-        print("\n\n🛑 Encerrando sistema...")
+        print("\n\nEncerrando sistema...")
     
     # ==== FINALIZAÇÃO ====
     
     monitor.parar()
     print(gerenciador.exportar_dados(Config.ARQUIVO_EXPORTACAO))
-    print("✓ Sistema encerrado.\n")
+    print("Sistema encerrado.\n")
 
 
 if __name__ == "__main__":

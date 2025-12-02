@@ -12,10 +12,8 @@ from models import Registro
 
 
 class GerenciadorRestaurante:
-    """Classe principal para gerenciar o restaurante"""
     
     def __init__(self):
-        """Inicializa o gerenciador do restaurante"""
         self.pessoas_dentro: set = set()
         self.historico: List[Registro] = []
         self.estatisticas_diarias = defaultdict(lambda: {
@@ -29,14 +27,13 @@ class GerenciadorRestaurante:
         self.pessoas_na_fila: int = 0
         self.ultima_atualizacao_fila: Optional[datetime.datetime] = None
         
-        # ← NOVO: Controle de tempo de permanência
-        self.horarios_entrada: Dict[str, datetime.datetime] = {}  # rfid -> timestamp entrada
-        self.tempos_permanencia: List[Dict] = []  # histórico de tempos
+        # Controle de tempo de permanência
+        self.horarios_entrada: Dict[str, datetime.datetime] = {}
+        self.tempos_permanencia: List[Dict] = []
         
         self.lock = threading.Lock()
     
     def registrar_entrada(self, rfid: str) -> Dict:
-        """Registra entrada de uma pessoa"""
         with self.lock:
             timestamp = datetime.datetime.now()
             
@@ -51,7 +48,6 @@ class GerenciadorRestaurante:
             registro = Registro(rfid, timestamp, 'entrada')
             self.historico.append(registro)
             
-            # ← NOVO: Registra horário de entrada
             self.horarios_entrada[rfid] = timestamp
             
             data_hoje = timestamp.date().isoformat()
@@ -65,7 +61,7 @@ class GerenciadorRestaurante:
             elif pessoas_atual == stats['pico_pessoas']:
                 stats['horarios_pico'].append(timestamp.strftime('%H:%M:%S'))
             
-            print(f"✓ ENTRADA registrada: {rfid} | Pessoas dentro: {pessoas_atual}")
+            print(f"ENTRADA registrada: {rfid} | Pessoas dentro: {pessoas_atual}")
             
             return {
                 'sucesso': True,
@@ -76,7 +72,6 @@ class GerenciadorRestaurante:
             }
     
     def registrar_saida(self, rfid: str) -> Dict:
-        """Registra saída de uma pessoa"""
         with self.lock:
             timestamp = datetime.datetime.now()
             
@@ -91,7 +86,6 @@ class GerenciadorRestaurante:
             registro = Registro(rfid, timestamp, 'saida')
             self.historico.append(registro)
             
-            # ← NOVO: Calcula tempo de permanência
             tempo_permanencia = None
             if rfid in self.horarios_entrada:
                 entrada = self.horarios_entrada[rfid]
@@ -106,14 +100,14 @@ class GerenciadorRestaurante:
                 self.tempos_permanencia.append(tempo_permanencia)
                 del self.horarios_entrada[rfid]
                 
-                print(f"⏱️  Tempo de permanência: {tempo_permanencia['duracao_formatada']}")
+                print(f"Tempo de permanência: {tempo_permanencia['duracao_formatada']}")
             
             data_hoje = timestamp.date().isoformat()
             stats = self.estatisticas_diarias[data_hoje]
             stats['total_saidas'] += 1
             
             pessoas_atual = len(self.pessoas_dentro)
-            print(f"✓ SAÍDA registrada: {rfid} | Pessoas dentro: {pessoas_atual}")
+            print(f"SAÍDA registrada: {rfid} | Pessoas dentro: {pessoas_atual}")
             
             return {
                 'sucesso': True,
@@ -125,7 +119,6 @@ class GerenciadorRestaurante:
             }
     
     def obter_status_atual(self) -> Dict:
-        """Retorna status atual do restaurante"""
         with self.lock:
             return {
                 'pessoas_dentro': len(self.pessoas_dentro),
@@ -137,7 +130,6 @@ class GerenciadorRestaurante:
             }
     
     def obter_estatisticas(self, data: Optional[str] = None) -> Dict:
-        """Retorna estatísticas do dia"""
         if data is None:
             data = datetime.date.today().isoformat()
         
@@ -157,18 +149,15 @@ class GerenciadorRestaurante:
             }
     
     def obter_historico(self, limite: int = 100) -> List[Dict]:
-        """Retorna histórico de registros"""
         with self.lock:
             return [reg.to_dict() for reg in self.historico[-limite:]]
     
     def atualizar_fila(self, qtd: int):
-        """Atualiza contagem de pessoas na fila (chamado pela câmera)"""
         with self.lock:
             self.pessoas_na_fila = max(0, int(qtd))
             self.ultima_atualizacao_fila = datetime.datetime.now()
     
     def _formatar_duracao(self, duracao: datetime.timedelta) -> str:
-        """Formata timedelta em string legível"""
         segundos_totais = int(duracao.total_seconds())
         horas = segundos_totais // 3600
         minutos = (segundos_totais % 3600) // 60

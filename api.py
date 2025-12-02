@@ -14,7 +14,6 @@ simulador: SimuladorRestaurante = None
 
 
 def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
-    """Cria e configura a aplicação Flask"""
     global gerenciador
     gerenciador = gerenciador_instancia
     simulador = SimuladorRestaurante(gerenciador)

@@ -12,7 +12,6 @@ from gerenciador import GerenciadorRestaurante
 
 
 class MonitorFilaCamera:
-    """Monitora a fila usando câmera e visão computacional"""
     
     def __init__(self, gerenciador: GerenciadorRestaurante,
                  camera_index: int = 0,
@@ -30,7 +29,6 @@ class MonitorFilaCamera:
             self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
     
     def iniciar(self):
-        """Inicia monitoramento da câmera"""
         if not self.habilitar:
             print("⚠ Monitor de câmera desabilitado")
             return False
@@ -41,7 +39,6 @@ class MonitorFilaCamera:
         return True
     
     def _loop_camera(self):
-        """Loop principal da câmera"""
         cap = cv2.VideoCapture(self.camera_index)
         
         if not cap.isOpened():
@@ -104,5 +101,4 @@ class MonitorFilaCamera:
         print("Câmera encerrada.")
     
     def parar(self):
-        """Para o monitoramento"""
         self.rodando = False
