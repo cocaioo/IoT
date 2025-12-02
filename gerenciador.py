@@ -9,18 +9,13 @@ from typing import Dict, List, Optional
 from collections import defaultdict
 
 from models import Registro
-from webcam_captura import CapturaWebcam  # ← NOVO IMPORT
 
 
 class GerenciadorRestaurante:
     """Classe principal para gerenciar o restaurante"""
     
-    def __init__(self, habilitar_fotos: bool = True, camera_index: int = 0):
-        """
-        Args:
-            habilitar_fotos: Se True, captura foto da webcam a cada entrada/saída
-            camera_index: Índice da webcam (0 = padrão)
-        """
+    def __init__(self):
+        """Inicializa o gerenciador do restaurante"""
         self.pessoas_dentro: set = set()
         self.historico: List[Registro] = []
         self.estatisticas_diarias = defaultdict(lambda: {
@@ -39,14 +34,6 @@ class GerenciadorRestaurante:
         self.tempos_permanencia: List[Dict] = []  # histórico de tempos
         
         self.lock = threading.Lock()
-        
-        # ← NOVO: Módulo de captura de fotos
-        self.habilitar_fotos = habilitar_fotos
-        if self.habilitar_fotos:
-            self.captura = CapturaWebcam(camera_index=camera_index)
-        else:
-            self.captura = None
-            print("⚠ Captura de fotos desabilitada")
     
     def registrar_entrada(self, rfid: str) -> Dict:
         """Registra entrada de uma pessoa"""
@@ -79,10 +66,6 @@ class GerenciadorRestaurante:
                 stats['horarios_pico'].append(timestamp.strftime('%H:%M:%S'))
             
             print(f"✓ ENTRADA registrada: {rfid} | Pessoas dentro: {pessoas_atual}")
-            
-            # ← NOVO: Captura foto da webcam
-            if self.captura:
-                self.captura.capturar_foto(rfid, "entrada")
             
             return {
                 'sucesso': True,
@@ -131,10 +114,6 @@ class GerenciadorRestaurante:
             
             pessoas_atual = len(self.pessoas_dentro)
             print(f"✓ SAÍDA registrada: {rfid} | Pessoas dentro: {pessoas_atual}")
-            
-            # ← NOVO: Captura foto da webcam
-            if self.captura:
-                self.captura.capturar_foto(rfid, "saida")
             
             return {
                 'sucesso': True,

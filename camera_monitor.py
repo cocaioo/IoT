@@ -6,6 +6,7 @@ import threading
 import time
 
 import cv2
+import numpy as np
 
 from gerenciador import GerenciadorRestaurante
 
@@ -24,9 +25,9 @@ class MonitorFilaCamera:
         self.rodando = False
         
         if self.habilitar:
-            self.bg_subtractor = cv2.createBackgroundSubtractorMOG2(
-                history=500, varThreshold=50, detectShadows=True
-            )
+            # Detector de pessoas HOG + SVM (mais preciso)
+            self.hog = cv2.HOGDescriptor()
+            self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
     
     def iniciar(self):
         """Inicia monitoramento da câmera"""
@@ -47,36 +48,54 @@ class MonitorFilaCamera:
             print(f"❌ Não foi possível abrir a câmera {self.camera_index}")
             return
         
-        print(f"✓ Câmera {self.camera_index} iniciada (monitoramento de fila)")
+        # Configura resolução menor para melhor performance
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        
+        print(f"✓ Câmera {self.camera_index} iniciada (detecção HOG+SVM)")
         
         ultimo_tempo = 0
+        frame_skip = 0
         
         while self.rodando:
             ret, frame = cap.read()
             if not ret:
                 print("❌ Falha ao ler frame da câmera")
-                break
+                time.sleep(0.5)
+                continue
             
-            # Processa frame
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            fg_mask = self.bg_subtractor.apply(gray)
+            # Processa a cada 3 frames para melhor performance
+            frame_skip += 1
+            if frame_skip % 3 != 0:
+                time.sleep(0.03)
+                continue
             
-            # Limpa ruído
-            _, th = cv2.threshold(fg_mask, 244, 255, cv2.THRESH_BINARY)
-            th = cv2.medianBlur(th, 5)
+            # Redimensiona para performance
+            frame_resized = cv2.resize(frame, (320, 240))
             
-            # Detecta contornos
-            contours, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            # Conta "pessoas" (blobs grandes)
-            min_area = 1500
-            count = sum(1 for c in contours if cv2.contourArea(c) > min_area)
+            # Detecta pessoas usando HOG
+            try:
+                boxes, weights = self.hog.detectMultiScale(
+                    frame_resized,
+                    winStride=(4, 4),
+                    padding=(8, 8),
+                    scale=1.05,
+                    useMeanshiftGrouping=False
+                )
+                
+                # Filtra detecções com baixa confiança
+                pessoas = [box for box, weight in zip(boxes, weights) if weight > 0.5]
+                count = len(pessoas)
+                
+            except Exception as e:
+                print(f"⚠ Erro na detecção: {e}")
+                count = 0
             
             # Atualiza periodicamente
             agora = time.time()
             if agora - ultimo_tempo >= self.intervalo_segundos:
                 self.gerenciador.atualizar_fila(count)
-                print(f"📹 Pessoas na fila: {count}")
+                print(f"📹 Pessoas detectadas na fila: {count}")
                 ultimo_tempo = agora
             
             time.sleep(0.1)

@@ -1,6 +1,6 @@
 """
 Sistema de Controle de Restaurante Universitário
-Integração com ESP32 (RFID) + Câmera (Fila) + Webcam (Fotos)
+Integração com ESP32 (RFID) + Câmera (Fila)
 
 Arquivo principal que orquestra todos os módulos do sistema
 """
@@ -21,11 +21,8 @@ def main():
     print("  SISTEMA DE CONTROLE - RESTAURANTE UNIVERSITÁRIO")
     print("="*60 + "\n")
     
-    # Inicializa gerenciador (com captura de fotos se habilitado)
-    gerenciador = GerenciadorRestaurante(
-        habilitar_fotos=Config.HABILITAR_FOTOS,  # ← NOVO
-        camera_index=Config.CAMERA_FOTOS_INDEX   # ← NOVO
-    )
+    # Inicializa gerenciador
+    gerenciador = GerenciadorRestaurante()
     print("✓ Gerenciador inicializado\n")
     
     # ==== INTEGRAÇÃO COM ESP32 ====
@@ -79,6 +76,7 @@ def main():
     
     # ==== FINALIZAÇÃO ====
     
+    monitor.parar()
     print(gerenciador.exportar_dados(Config.ARQUIVO_EXPORTACAO))
     print("✓ Sistema encerrado.\n")
 
