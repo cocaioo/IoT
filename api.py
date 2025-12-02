@@ -5,18 +5,38 @@ API HTTP usando Flask para comunicação com ESP32 e consultas
 from flask import Flask, request, jsonify
 
 from gerenciador import GerenciadorRestaurante
+from simulador import SimuladorRestaurante
 
 
 # Instância do gerenciador (será injetada pelo main)
 gerenciador: GerenciadorRestaurante = None
+simulador: SimuladorRestaurante = None
 
 
 def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
     """Cria e configura a aplicação Flask"""
     global gerenciador
     gerenciador = gerenciador_instancia
+    simulador = SimuladorRestaurante(gerenciador)
     
     app = Flask(__name__)
+
+    @app.route("/simular/entrada", methods=["POST"])
+    def simular_entrada():
+        res = simulador.simular_entrada()
+        return jsonify(res)
+
+    @app.route("/simular/saida", methods=["POST"])
+    def simular_saida():
+        res = simulador.simular_saida()
+        return jsonify(res)
+
+    @app.route("/simular/fila", methods=["POST"])
+    def simular_fila():
+        dados = request.json
+        qtd = int(dados.get('qtd', 0))
+        simulador.simular_fila(qtd)
+        return jsonify({'sucesso': True, 'fila': qtd})
     
     @app.route("/evento", methods=["POST"])
     def evento():
@@ -209,10 +229,37 @@ def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
             padding: 40px;
             color: #999;
         }
+        
+        .sim-toolbar {
+            background: #2c3e50; color: white; padding: 15px; 
+            border-radius: 8px; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        
+        .sim-btn {
+            padding: 8px 15px; border: none; border-radius: 4px; 
+            cursor: pointer; font-weight: bold; color: white;
+        }
+        .btn-green { background: #27ae60; }
+        .btn-red { background: #c0392b; }
+        .btn-blue { background: #2980b9; }
+        .sim-input { padding: 8px; width: 60px; border-radius: 4px; border: none; }
     </style>
 </head>
 <body>
     <div class="container">
+    
+        <div class="sim-toolbar">
+            <strong>🛠️ Simulador:</strong>
+            <button onclick="simular('entrada')" class="sim-btn btn-green">+ Entrar Pessoa</button>
+            <button onclick="simular('saida')" class="sim-btn btn-red">- Sair Pessoa</button>
+            
+            <div style="margin-left: auto; display:flex; gap: 5px;">
+                <input type="number" id="simFilaQtd" class="sim-input" placeholder="0">
+                <button onclick="simularFila()" class="sim-btn btn-blue">Set Fila</button>
+            </div>
+        </div>
+        
         <header>
             <h1>🍽️ Sistema de Controle - Restaurante Universitário</h1>
             <p class="subtitle">Monitoramento em tempo real de entradas e saídas</p>
@@ -257,9 +304,52 @@ def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
         </div>
         
         <p class="refresh-info">⟳ Atualização automática a cada 3 segundos</p>
+        
+        <div id="toast">Ação realizada</div>
     </div>
     
     <script>
+    
+        function mostrarToast(msg) {
+            var x = document.getElementById("toast");
+            x.innerText = msg;
+            x.className = "show";
+            setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+        }
+        
+        async function simular(acao) {
+            try {
+                const res = await fetch(`/simular/${acao}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ acao: acao }),
+                });
+                const data = await res.json();
+                
+                if(data.mensagem) mostrarToast(data.mensagem);
+                else mostrarToast("Sucesso: " + acao);
+                
+                atualizarDados(); 
+            } catch (e) { console.error(e); }
+        }
+
+        async function simularFila() {
+            const inputEl = document.getElementById('simFilaQtd');
+            if (!inputEl) {
+                console.error("Erro: Input 'simFilaQtd' não encontrado!");
+                return;
+            }
+            const qtd = inputEl.value;
+            
+            await fetch('/simular/fila', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ acao: 'fila', qtd: qtd }),
+            });
+            mostrarToast("Fila definida: " + qtd);
+            atualizarDados();
+        }
+        
         function formatarTempo(segundos) {
             const horas = Math.floor(segundos / 3600);
             const minutos = Math.floor((segundos % 3600) / 60);
@@ -301,7 +391,7 @@ def criar_app(gerenciador_instancia: GerenciadorRestaurante) -> Flask:
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">👨‍👩‍👧‍👦 Fila (Câmera)</div>
-                        <div class="stat-value">${status.pessoas_fila || 0}</div>
+                        <div class="stat-value">${status.pessoas_na_fila || 0}</div>
                     </div>
                 `;
                 
