@@ -74,8 +74,6 @@ def main():
     except KeyboardInterrupt:
         print("\n\nEncerrando sistema...")
     
-    # ==== FINALIZAÇÃO ====
-    
     monitor.parar()
     print(gerenciador.exportar_dados(Config.ARQUIVO_EXPORTACAO))
     print("Sistema encerrado.\n")
